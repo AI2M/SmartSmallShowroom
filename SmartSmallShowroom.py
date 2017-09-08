@@ -82,16 +82,7 @@ def lcd_string(message,line):
 
   for i in range(LCD_WIDTH):
     lcd_byte(ord(message[i]),LCD_CHR)
-def lcd_string_slide(message,line):
-  # Send string to display
 
-  message = message.ljust(LCD_WIDTH," ")
-
-  lcd_byte(line, LCD_CMD)
-  for i in range(LCD_WIDTH):
-    lcd_byte(ord(message[i]),LCD_CHR)
-    if(line>15):
-      lcd_byte(ord(message[i-15]),LCD_CHR-5)
       
     
 #------------------------------------#End Define Display
@@ -279,8 +270,9 @@ while True:
         stateButton = 0
         stateButton2 = 0
         
-    if(pygame.mixer.music.get_busy()!=True):
-      lcd_string_slide("Enter ItemNumber",LCD_LINE_1+5)
+    if(pygame.mixer.music.get_busy()!=True and ItemNumber == ""):
+      lcd_string("Enter ItemNumber",LCD_LINE_1)
+      lcd_string("",LCD_LINE_2)
       
      
 
