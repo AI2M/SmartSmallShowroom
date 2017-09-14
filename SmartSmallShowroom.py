@@ -3,12 +3,6 @@ import pygame
 import time 
 from time import sleep
 import smbus
-
-
-
-io.setmode(io.BCM)
-pygame.mixer.init()
-
 #------------------------------------#Start Define Display
 # Define some device parameters
 I2C_ADDR  = 0x3f # I2C device address, if any error, change this address to 0x27
@@ -86,39 +80,37 @@ def lcd_string(message,line):
       
     
 #------------------------------------#End Define Display
-
-Btn = [12,16,20,21] #4pin D C B A
-Btn2 = [8,7] #2pin A B
-LEDOutput = [11,9,10,22,27] #5pin 
+lcd_init()
+io.setmode(io.BCM)
+pygame.mixer.init()
 LedControl = 23 #1pin
 MotorOutput = [26,5,6,13,19] #5pin en A0 A1 A2 A3 
 MotorControl = [17,4,14,15] #4pin
-Sensor = 18 #1pin 
-#total = 22 pin 
-#free = 4 pin
 
+ROW = [21,20,16,12] 
+COL = [11,9,10]
 
-stateButton = 0
-last_stateButton = 1
-stateButton2 = 0
-last_stateButton2 = 1
-stateMusic =-1
+MATRIX = [[1,2,3],
+           [4,5,6],
+           [7,8,9],
+           [11,0,12]]
+
 ItemNumber = ""
-ItemRef = ["0","8","08","8888","8080","8000","0008","0088","8008"]
-lcd_init()
+try:
+  for j in range(3):
+    io.setup(COL[j], io.OUT)
+    io.output(COL[j], 1)
 
-for i in range(len(Btn)):
-    io.setup(Btn[i], io.IN)
+  for i in range (4):
+    io.setup(ROW[i], io.IN)
 
-for j in range(len(Btn2)):
-    io.setup(Btn2[j], io.IN)
+  for k in range(len(MotorControl)):
+    io.setup(MotorControl[k], io.OUT)
 
-for k in range(len(MotorControl)):
-  io.setup(MotorControl[k], io.OUT)
-
-for l in range(len(MotorOutput)):
-  io.setup(MotorOutput[l], io.OUT)
-
+  for l in range(len(MotorOutput)):
+    io.setup(MotorOutput[l], io.OUT)
+except KeyboardInterupt:
+  io.cleanup()
 
 def Stepper_control():
   
@@ -150,14 +142,14 @@ def Stepper_output(a,b,c,d):
     io.output(MotorOutput[3],c)
     io.output(MotorOutput[4],d)
 
-#ItemRef = ["0","8","08","8888","8080","8000","0008","0088","8008"]
+ItemRef = ["7","79","08","8888","8080","8000","0008","0088","8008"]
 def Mapping(ItemNumber):
   if(ItemNumber == ItemRef[0]):
     Stepper_output(0,0,0,0)#y0
     print("y0")
     
   elif(ItemNumber == ItemRef[1]):
-    Stepper_output(0,0,0,1)#y130
+    Stepper_output(0,0,0,1)#y1
     print("y1")
     
   elif(ItemNumber == ItemRef[2]):
@@ -199,7 +191,7 @@ def play_music(Position):
         print("now, playing music"+str(Position)+".mp3")
         lcd_string("Playing",LCD_LINE_1)
         lcd_string("music"+str(Position)+".mp3",LCD_LINE_2)
-        motoron = 1
+        
         
     except :
         pygame.mixer.music.stop()
@@ -207,72 +199,49 @@ def play_music(Position):
         lcd_string("no music"+str(Position)+".mp3",LCD_LINE_1)
         lcd_string("Try Again",LCD_LINE_2)
         sleep(2)
-        motoron = 0
+        
         pass
-    stateButton = 1
+    
 
 
 io.output(MotorOutput[0],1)    
 while True:
-    
-    inputBi = ""
-    input2Bi = ""
     Stepper_control()
-    for i in range(len(Btn)):
-        inputBi +=(str(io.input(Btn[i])))
-    for j in range(len(Btn2)):
-        input2Bi +=(str(io.input(Btn2[j])))
-        
-    inputDec = 14-int(inputBi,2)
-    input2Dec = 11-int(input2Bi,2)
 
-    if(inputDec !=-1 and stateButton==0):
-        if(len(ItemNumber)<4):
-            ItemNumber += str(inputDec)
-            print(ItemNumber)
-            lcd_string(str(ItemNumber),LCD_LINE_1)
-            lcd_string("",LCD_LINE_2)
-            sleep(0.5)
-            stateButton = 1
-        
+    for j in range (3):
+        io.output(COL[j],0)
+        for i in range(4):
+            if io.input (ROW[i]) == 0:
+                if(MATRIX[i][j]  != 12 and MATRIX[i][j] !=11):
+                  if(len(ItemNumber)<4):
+                    ItemNumber+= str(MATRIX[i][j])
+                  lcd_string(str(ItemNumber),LCD_LINE_1)
+                  lcd_string("",LCD_LINE_2)
+                  print(ItemNumber)
+
+                elif (MATRIX[i][j] == 11):
+                  ItemNumber = ItemNumber.replace(' ','')[:-1].upper()
+                  lcd_string(str(ItemNumber),LCD_LINE_1)
+                  lcd_string("",LCD_LINE_2)
+                  print(ItemNumber)
+
+                elif (MATRIX[i][j] == 12):
+                  lcd_clear()
+                  Mapping(ItemNumber)
+                  play_music(ItemNumber)
+                  ItemNumber=""
+                  
+                time.sleep(0.1)
+                while (io.input(ROW[i]) == 0):
+                    pass
+        io.output(COL[j],1)
+  
     
-        
-    if(input2Dec == 9 and stateButton2==0):
-        if(len(ItemNumber)<4):
-            ItemNumber += str(input2Dec)
-            print(ItemNumber)
-            lcd_string(str(ItemNumber),LCD_LINE_1)
-            lcd_string("",LCD_LINE_2)
-            sleep(0.5)
-            stateButton2 = 1
-        
-
-    if(input2Dec == 10 and stateButton2==0):
-        ItemNumber = ItemNumber.replace(' ','')[:-1].upper()
-        print(ItemNumber)
-        lcd_string(str(ItemNumber),LCD_LINE_1)
-        lcd_string("",LCD_LINE_2)
-        sleep(0.5)
-        stateButton2 = 1
-
-    if(input2Dec == 11 and stateButton2==0 and ItemNumber !=""):
-        print("ok")
-        lcd_clear()
-        sleep(0.5)
-        Mapping(ItemNumber)
-        play_music(ItemNumber)
-        ItemNumber = ""
-        stateButton2 = 1
-        
-        
-
-    if(inputDec == -1 and input2Dec == 8):
-        stateButton = 0
-        stateButton2 = 0
-        
+    
     if(pygame.mixer.music.get_busy()!=True and ItemNumber == ""):
       lcd_string("Enter ItemNumber",LCD_LINE_1)
       lcd_string("",LCD_LINE_2)
+      io.output(MotorOutput[0],1)
       
      
 
@@ -280,16 +249,7 @@ while True:
        
       
       
-              
 
-     
-
-    #print(inputBi + " Btn")
-    #print(str(inputDec) + " Btn")
-    #print(input2Bi + " Btn2")
-    #print(str(input2Dec) + " Btn2")
-    #print("-----")
-    #sleep(1)
    
 
    
